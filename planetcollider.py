@@ -8,46 +8,70 @@ from timeit import default_timer as timed
 from scipy.spatial.distance import cdist
 from mpl_toolkits.mplot3d import axes3d
 
-G = 6.674e-11
-particles = 2400
-planet = np.loadtxt(f'./Planet{particles}.dat')
-r = np.amax(planet[:,0]) - np.amin(planet[:,0])
-planet[:,3] = - planet[:,1] * 0.0004
-planet[:,4] = planet[:,0] * 0.0004
+
+# constants
+G = 6.674e-11 # gravitational constant in SI units
+
+# select which data file to import: 300, 600, 1200 or 2400
+particles = 300
+# import file which contains x,y,z,vx,vy,vz,mass,density,pressure for each particle
+planet = np.loadtxt(f'./data/Planet{particles}.dat')
+
+# roughly estimate radius of planet by taking maximum x position value
+r = np.amax(planet[:,0])
+
+# initiate planet with spin by adding perpendicular velocity to each particle
+spin = 0.0004 # magnitude of spin
+planet[:,3] = - planet[:,1] * spin
+planet[:,4] = planet[:,0] * spin
+
+# create a second planet by copying the first
 planet2 = np.copy(planet)
+# move second planet away in the y direction
 planet2[:,1] += 1.5*r
+# move second planet away in the x direction
 planet2[:,0] += - 1*r
+# give second planet a velocity towards first to ensure collision
 planet2[:,4] += - 2e4
+# add planets into one data set for integrator
 data = np.vstack((planet, planet2))
 
-total = len(data)
-energy = data[:,8] / data[:,7] / 0.4
-data = np.append(data, energy.reshape(total, -1), axis=1)
-len1, len2 = len(planet), len(planet2)
 
+total = len(data) # amount of particles in both planets
+energy = data[:,8] / data[:,7] / 0.4  # calculate energy of particle from density and pressure
+data = np.append(data, energy.reshape(total, -1), axis=1) # add energy column to data
+len1, len2 = len(planet), len(planet2) # amount of particles in each planet
+
+# use itertools.product to create combinations to avoid loops
 combinations = np.array(list(product(np.arange(total), np.arange(total))))
 i, j = combinations[:,0], combinations[:,1]
 
+# function that calculates the change in properties for each particle
 def FORCE(t, data):
+    # integrator needs flattened array so FORCE function takes flattened array which needs to be reshaped
     data = data.reshape(total, -1)    
+    # pull out different properties of particles
     position = data[:,0:3]
     velocity = data[:,3:6]
     mass = np.mean(data[:,6])
     density = data[:,7].reshape(total, -1)
     pressure = data[:,8].reshape(total, -1)
-    energy = data[:,9].reshape(total, -1)    
-    h = np.full((total**2, 1),1.3e7)
-    dx = position[i] - position[j]
-    distance = cdist(position, position).reshape(total**2, -1)
-    R = distance / h
-    alpha = 3 / (2 * np.pi * h**3)    
-    h[h==0]=1e-9
-    distance[distance==0]=1e-9
-    R[R==0]=1e-9
+    energy = data[:,9].reshape(total, -1)
     
-    r1 = R < 1
-    r2 = np.logical_and(R >= 1, R < 2)
-    r3 = R >= 2
+    
+    h = np.full((total**2, 1),1.3e7) # create array of h values same length as data
+    dx = position[i] - position[j] # difference in position between each particle and every other particle - length is len(data)**2
+    
+    distance = cdist(position, position).reshape(total**2, -1) # distance between each particle and every other particle
+    R = distance / h                    # R in equation
+    alpha = 3 / (2 * np.pi * h**3)      # alpha in equation
+    h[h==0]=1e-9                        # replace zero values in h with small value to prevent crash
+    distance[distance==0]=1e-9          # replace zero values in distance with small value to prevent crash
+    R[R==0]=1e-9                        # replace zero values in R with small value to prevent crash
+    
+    r1 = R < 1                          # r1 in equation
+    r2 = np.logical_and(R >= 1, R < 2)  # r1 in equation
+    r3 = R >= 2                         # r3 in equation
     
     w = np.zeros((total**2, 1))
     w[r1] = alpha[r1] * (2/3 - R[r1]**2 + 0.5 * R[r1]**3)
