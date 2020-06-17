@@ -7,9 +7,7 @@ Hydrodynamical simulations are common in astronomy in cases where there are too 
 
 ### Getting started
 
-Select the amount of particles to use by setting the variable planet equal to 300, 600, 1200 or 2400.
-    planet = 300
-This will select the correct data file. Start with 300 particles, as once more particles are used, the simulation time greatly increases, with the largest planets taking many hours. The runtime can also be changed, and a small value should be tried first, as different machines can take different amounts of time to carry out the integrations.
+Select the amount of particles to use by setting the variable `planet` equal to 300, 600, 1200 or 2400. This will select the correct data file. Start with 300 particles, as once more particles are used, the simulation time greatly increases, with the largest planets taking many hours. The `runtime` can also be changed, and a small value should be tried first, as different machines can take different amounts of time to carry out the integrations. The position and velocity of the second planet can be adjusted for different kinds of collisions. The magnitude of the spin of the planets can also be changed.
 
 ### Requirements
 
